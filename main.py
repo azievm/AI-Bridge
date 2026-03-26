@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Body, Request
+from fastapi import FastAPI, Body, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from gemini_client import get_answer_from_gemini
 from contextlib import asynccontextmanager
-from db import Base, engine, get_user_requests, add_request_data
+from db import Base, delete_user_requests, engine, get_user_requests, add_request_data
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,7 +18,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -44,3 +44,18 @@ def send_prompt(
     )
 
     return {"answer": answer}
+
+
+@app.delete("/requests", status_code=status.HTTP_204_NO_CONTENT)
+def delete_my_requests(request: Request):
+
+    user_ip_address = request.client.host
+    
+    deleted_count = delete_user_requests(ip_address=user_ip_address)
+    
+    if deleted_count == 0:
+        pass
+    else:
+        print(f"Удалено {deleted_count} записей для IP: {user_ip_address}")
+    
+    return None

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, delete
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 
 engine = create_engine(url="sqlite:///requests.db")
@@ -35,3 +35,10 @@ def add_request_data(ip_address: str, prompt:str, response: str) -> None:
         )
         new_session.add(new_request)
         new_session.commit()
+
+def delete_user_requests(ip_address: str) -> int:
+    with session() as new_session:
+        query = delete(ChatRequests).where(ChatRequests.ip_address == ip_address)
+        result = new_session.execute(query)
+        new_session.commit()
+        return result.rowcount
