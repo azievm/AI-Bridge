@@ -3,273 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Bridge — Чат с Gemini</title>
+    <title>AI Bridge — Frontend Code Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; }
-        
-        .chat-container {
+        .chat-container { scrollbar-width: thin; }
+        .message { max-width: 85%; padding: 14px 18px; border-radius: 20px; }
+        .user-message { background: #2563eb; color: white; border-bottom-right-radius: 4px; }
+        .ai-message { background: #f1f5f9; color: #1e2937; }
+
+        .scroll-panel {
             scrollbar-width: thin;
-            scrollbar-color: #64748b #f8fafc;
+            scrollbar-color: #64748b #1e2937;
         }
-        .chat-container::-webkit-scrollbar { width: 6px; }
-        .chat-container::-webkit-scrollbar-thumb {
+        .scroll-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scroll-panel::-webkit-scrollbar-thumb {
             background: #64748b;
             border-radius: 20px;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 14px 18px;
-            border-radius: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .user-message {
-            background: #2563eb;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .ai-message {
-            background: #f1f5f9;
-            color: #1e2937;
-            border-bottom-left-radius: 4px;
-        }
-
-        .typing {
-            display: flex;
-            gap: 5px;
-        }
-        .typing-dot {
-            width: 7px;
-            height: 7px;
-            background: #64748b;
-            border-radius: 50%;
-            animation: typing 1.4s infinite ease-in-out;
-        }
-        .typing-dot:nth-child(2) { animation-delay: 150ms; }
-        .typing-dot:nth-child(3) { animation-delay: 300ms; }
-
-        @keyframes typing {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-200 h-screen flex overflow-hidden">
 
-    <div class="max-w-4xl mx-auto w-full h-screen flex flex-col bg-white shadow-2xl overflow-hidden">
-        <!-- Header -->
-        <header class="bg-white border-b px-6 py-4 flex items-center justify-between">
+    <!-- Левая панель -->
+    <div class="w-2/5 border-r border-slate-800 flex flex-col h-full overflow-hidden">
+        <header class="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow">
-                    ✨
-                </div>
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-800">AI Bridge</h1>
-                </div>
+                <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center text-2xl">✦</div>
+                <h1 class="text-2xl font-bold">AI Bridge</h1>
             </div>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="loadHistory()" 
-                        class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-2xl transition">
-                    <i class="fas fa-sync"></i>
-                    Обновить
-                </button>
-                
-                <button onclick="clearChatHistory()" 
-                        class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-2xl transition">
-                    <i class="fas fa-trash"></i>
-                    Очистить чат
-                </button>
-            </div>
+            <button onclick="clearChatHistory()" 
+                    class="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-950 rounded-2xl text-sm transition">
+                <i class="fas fa-trash"></i> Очистить
+            </button>
         </header>
 
-        <!-- Chat Area -->
-        <div id="chat" class="flex-1 overflow-y-auto chat-container p-6 space-y-6 bg-slate-50"></div>
+        <div id="chat" class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6 chat-container bg-slate-950"></div>
 
-        <!-- Input Area -->
-        <div class="p-6 border-t bg-white">
+        <div class="p-6 border-t border-slate-800 bg-slate-900">
             <div class="flex gap-3">
-                <input 
-                    id="user-input"
-                    type="text"
-                    class="flex-1 bg-slate-100 border border-slate-300 focus:border-blue-500 rounded-3xl px-6 py-4 text-base outline-none transition-all"
-                    placeholder="Напишите ваш запрос..."
-                    autocomplete="off"
-                >
-                <button 
-                    id="send-btn"
-                    class="bg-blue-600 hover:bg-blue-700 w-14 h-14 flex items-center justify-center rounded-3xl text-white transition shadow">
+                <input id="user-input" type="text"
+                       class="flex-1 bg-slate-800 border border-slate-700 focus:border-violet-500 rounded-3xl px-6 py-4 outline-none text-base transition"
+                       placeholder="Например: красная кнопка с белым текстом и тенью...">
+                <button id="send-btn"
+                        class="bg-violet-600 hover:bg-violet-700 w-14 h-14 flex items-center justify-center rounded-3xl text-white transition">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <script>
-        const API_BASE = 'http://localhost:8000';
+    <!-- Правая панель -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+        <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-        function addMessage(role, text) {
-            const chat = document.getElementById('chat');
-            const div = document.createElement('div');
-            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-
-            div.innerHTML = `
-                <div class="message ${role === 'user' ? 'user-message' : 'ai-message'}">
-                    <div class="text-xs opacity-75 mb-1">${role === 'user' ? 'Вы' : 'Gemini'}</div>
-                    <div class="whitespace-pre-wrap break-words">${text}</div>
-                </div>
-            `;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        function showTyping() {
-            const chat = document.getElementById('chat');
-            const typing = document.createElement('div');
-            typing.id = 'typing';
-            typing.className = 'flex justify-start';
-            typing.innerHTML = `
-                <div class="message ai-message">
-                    <div class="typing">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
+            <!-- Код -->
+            <div class="flex-1 flex flex-col border-b border-slate-800 min-h-0">
+                <div class="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-sm font-medium">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-code text-emerald-400"></i>
+                        <span>Код компонента</span>
                     </div>
+                    <button onclick="copyCode()" 
+                            class="flex items-center gap-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl text-xs transition">
+                        <i class="fas fa-copy"></i> Скопировать
+                    </button>
                 </div>
-            `;
-            chat.appendChild(typing);
-            chat.scrollTop = chat.scrollHeight;
-            return typing;
-        }
+                <pre id="code-block" 
+                     class="flex-1 min-h-0 p-6 overflow-y-auto overflow-x-auto scroll-panel bg-slate-950 text-emerald-300 font-mono text-sm whitespace-pre leading-relaxed">
+                </pre>
+            </div>
 
-        // Загрузка истории чата
-        async function loadHistory() {
-            const chat = document.getElementById('chat');
-            chat.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-center py-20 text-slate-400">
-                    <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
-                    <p>Загрузка истории...</p>
+            <!-- Превью -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-eye text-sky-400"></i>
+                    <span>Живое превью</span>
                 </div>
-            `;
-
-            try {
-                const res = await fetch(`${API_BASE}/requests`);
-                if (!res.ok) throw new Error('Не удалось загрузить историю');
-
-                const data = await res.json();
-                chat.innerHTML = '';
-
-                if (!data || data.length === 0) {
-                    showWelcome();
-                    return;
-                }
-
-                data.forEach(item => {
-                    if (item.prompt) addMessage('user', item.prompt);
-                    if (item.response || item.answer) {
-                        addMessage('ai', item.response || item.answer);
-                    }
-                });
-
-            } catch (e) {
-                chat.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-red-500 text-center py-20">
-                        <i class="fas fa-exclamation-circle text-5xl mb-4"></i>
-                        <p class="text-lg">Ошибка загрузки истории</p>
-                        <p class="text-sm mt-2">${e.message}</p>
-                    </div>
-                `;
-            }
-        }
-
-        function showWelcome() {
-            const chat = document.getElementById('chat');
-            chat.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-center py-20">
-                    <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-3xl flex items-center justify-center text-6xl mb-6 shadow-md">
-                        ✨
-                    </div>
-                    <h2 class="text-3xl font-semibold text-slate-700">Добро пожаловать в AI Bridge</h2>
-                    <p class="text-slate-500 mt-3 max-w-sm">Задавайте вопросы — вся история сохраняется на сервере</p>
+                <div class="flex-1 min-h-0 p-8 bg-slate-100 overflow-y-auto scroll-panel flex items-center justify-center">
+                    <iframe id="preview-frame" 
+                            class="w-full max-w-3xl h-full border-2 border-slate-300 shadow-2xl rounded-3xl bg-white"
+                            frameborder="0">
+                    </iframe>
                 </div>
-            `;
+            </div>
+
+        </div>
+    </div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+
+function addMessage(role, text) {
+    const chat = document.getElementById('chat');
+    const div = document.createElement('div');
+    div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+    div.innerHTML = `
+        <div class="message ${role === 'user' ? 'user-message' : 'ai-message'}">
+            <div class="text-xs opacity-75 mb-1">${role === 'user' ? 'Вы' : 'Gemini'}</div>
+            <div class="whitespace-pre-wrap break-words">${text}</div>
+        </div>
+    `;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function showCode(code) {
+    document.getElementById('code-block').textContent = code || '// Код не получен';
+}
+
+function renderPreview(code) {
+    const frame = document.getElementById('preview-frame');
+    frame.srcdoc = code || `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999">Превью появится здесь</div>`;
+}
+
+async function loadLastRequest() {
+    try {
+        const res = await fetch(`${API_BASE}/requests`);
+        const data = await res.json();
+
+        if (!data.length) return;
+
+        const item = data[0];
+        addMessage('user', item.prompt);
+
+        let resp;
+        try {
+            resp = JSON.parse(item.response);
+        } catch {
+            resp = { description: item.response, code: '' };
         }
 
-        async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const prompt = input.value.trim();
-            if (!prompt) return;
+        addMessage('ai', resp.description);
+        showCode(resp.code);
+        renderPreview(resp.code);
 
-            addMessage('user', prompt);
-            input.value = '';
+    } catch {}
+}
 
-            const typingIndicator = showTyping();
+async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const prompt = input.value.trim();
+    if (!prompt) return;
 
-            try {
-                const res = await fetch(`${API_BASE}/requests`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ prompt: prompt })
-                });
+    addMessage('user', prompt);
+    input.value = '';
 
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    try {
+        const res = await fetch(`${API_BASE}/requests`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
 
-                const data = await res.json();
-                typingIndicator.remove();
-                addMessage('ai', data.answer || data.response || 'Ответ не получен');
+        const data = await res.json();
 
-            } catch (err) {
-                typingIndicator.remove();
-                addMessage('ai', `❌ Ошибка соединения:<br><span class="text-sm">${err.message}</span>`);
-            }
-        }
+        addMessage('ai', data.description);
+        showCode(data.code);
+        renderPreview(data.code);
 
-        // Очистка всей истории чата
-        async function clearChatHistory() {
-            if (!confirm("Вы уверены, что хотите полностью удалить всю историю чата?\n\nЭто действие нельзя отменить.")) {
-                return;
-            }
+    } catch (err) {
+        addMessage('ai', 'Ошибка соединения');
+    }
+}
 
-            try {
-                const res = await fetch(`${API_BASE}/requests`, {
-                    method: 'DELETE'
-                });
+function copyCode() {
+    const code = document.getElementById('code-block').textContent.trim();
+    navigator.clipboard.writeText(code);
+}
 
-                if (res.ok) {
-                    document.getElementById('chat').innerHTML = '';
-                    showWelcome();
-                    alert("✅ История чата успешно очищена");
-                } else {
-                    alert("Не удалось очистить историю");
-                }
-            } catch (err) {
-                alert("Ошибка соединения: " + err.message);
-            }
-        }
+window.onload = () => {
+    loadLastRequest();
 
-        // Инициализация при загрузке страницы
-        window.onload = () => {
-            loadHistory();
+    document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('user-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') sendMessage();
+    });
+};
+</script>
 
-            const input = document.getElementById('user-input');
-            const sendBtn = document.getElementById('send-btn');
-
-            sendBtn.addEventListener('click', sendMessage);
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-
-            input.focus();
-        };
-    </script>
 </body>
 </html>
