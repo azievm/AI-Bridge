@@ -4,6 +4,9 @@ from gemini_client import get_answer_from_gemini
 from contextlib import asynccontextmanager
 from db import Base, delete_user_requests, engine, get_user_requests, add_request_data
 import json
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,3 +53,19 @@ def delete_my_requests(request: Request):
     if deleted_count > 0:
         print(f"Удалён последний запрос для IP: {user_ip_address}")
     return None
+
+# Монтируем собранный React
+static_dir = Path(__file__).parent / "static"
+
+if static_dir.exists() and (static_dir / "index.html").exists():
+    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        # Не перехватываем API-эндпоинты
+        if full_path.startswith(("requests", "docs", "redoc", "openapi")):
+            raise HTTPException(status_code=404, detail="Not found")
+        # Для всех остальных путей отдаём React
+        return FileResponse(static_dir / "index.html")
+else:
+    print("⚠️  Папка backend/static/index.html не найдена. Запусти 'npm run build' в папке frontend")
