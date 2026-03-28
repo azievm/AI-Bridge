@@ -206,5 +206,19 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-config.py
+backend/config.py
 requests.db
+
+# ====================== Frontend (React + Vite) ======================
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.env.*.local
+
+# Vite specific
+.vite/
+vite.config.*.timestamp-*
+
