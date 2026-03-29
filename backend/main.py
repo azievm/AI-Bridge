@@ -9,8 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
-import jwt
-from jwt import PyJWTError
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 
@@ -98,7 +97,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         email = payload.get("email")
         if user_id is None or email is None:
             raise credentials_error
-    except PyJWTError as ex:
+    except JWTError as ex:
         raise credentials_error from ex
 
     user = get_user_by_email(email=email)
