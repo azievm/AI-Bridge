@@ -1,8 +1,8 @@
 from google import genai
-from config import config_obj
+from config import API_KEY
 import json
 
-client = genai.Client(api_key=config_obj.gemini_api_key)
+client = genai.Client(api_key=API_KEY)
 
 
 def get_answer_from_gemini(prompt: str):
