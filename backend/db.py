@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, select, delete
+from sqlalchemy import create_engine, select, delete, inspect, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 
 engine = create_engine(url="sqlite:///requests.db")
@@ -9,42 +9,91 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    password_hash: Mapped[str]
+
+
 class ChatRequests(Base):
     __tablename__ = "chat_requests"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    ip_address: Mapped[str] = mapped_column(index=True)
+    user_id: Mapped[int] = mapped_column(index=True)
     prompt: Mapped[str]
-    response: Mapped[str]   # теперь храним JSON-строку {description, code}
+    response: Mapped[str]  # JSON-строка {description, code}
 
 
-def get_user_requests(ip_address: str) -> list[ChatRequests]:
+def init_db() -> None:
+    """Создаёт таблицы и мягко мигрирует старую схему chat_requests (ip_address -> user_id)."""
+    Base.metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+        table_names = inspector.get_table_names()
+        if "chat_requests" not in table_names:
+            return
+
+        columns = {column["name"] for column in inspector.get_columns("chat_requests")}
+
+        if "user_id" not in columns:
+            # SQLite: поддерживается только ADD COLUMN, поэтому делаем мягкую миграцию
+            connection.execute(text("ALTER TABLE chat_requests ADD COLUMN user_id INTEGER"))
+            connection.execute(text("UPDATE chat_requests SET user_id = 0 WHERE user_id IS NULL"))
+
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_chat_requests_user_id ON chat_requests (user_id)")
+        )
+
+        # Старые записи без пользователя удаляем, чтобы не ломать логику авторизации
+        connection.execute(text("DELETE FROM chat_requests WHERE user_id = 0"))
+
+
+def get_user_by_email(email: str) -> User | None:
     with session() as new_session:
-        query = select(ChatRequests).filter_by(ip_address=ip_address)
+        query = select(User).filter_by(email=email)
+        result = new_session.execute(query)
+        return result.scalars().first()
+
+
+def create_user(email: str, password_hash: str) -> User:
+    with session() as new_session:
+        user = User(email=email, password_hash=password_hash)
+        new_session.add(user)
+        new_session.commit()
+        new_session.refresh(user)
+        return user
+
+
+def get_user_requests(user_id: int) -> list[ChatRequests]:
+    with session() as new_session:
+        query = select(ChatRequests).filter_by(user_id=user_id)
         result = new_session.execute(query)
         return result.scalars().all()
 
 
-def add_request_data(ip_address: str, prompt: str, response: str) -> None:
+def add_request_data(user_id: int, prompt: str, response: str) -> None:
     with session() as new_session:
-        # Удаляем ВСЁ старое для этого IP
+        # Храним только последний запрос пользователя
         new_session.execute(
-            delete(ChatRequests).where(ChatRequests.ip_address == ip_address)
+            delete(ChatRequests).where(ChatRequests.user_id == user_id)
         )
-        # Добавляем новый
+
         new_request = ChatRequests(
-            ip_address=ip_address,
+            user_id=user_id,
             prompt=prompt,
-            response=response
+            response=response,
         )
         new_session.add(new_request)
         new_session.commit()
 
 
-def delete_user_requests(ip_address: str) -> int:
+def delete_user_requests(user_id: int) -> int:
     with session() as new_session:
         result = new_session.execute(
-            delete(ChatRequests).where(ChatRequests.ip_address == ip_address)
+            delete(ChatRequests).where(ChatRequests.user_id == user_id)
         )
         new_session.commit()
         return result.rowcount
